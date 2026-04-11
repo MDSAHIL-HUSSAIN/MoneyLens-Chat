@@ -1,0 +1,26 @@
+# Virtual environments
+venv/
+aiSystemBackend/venv/
+
+# Environment variables
+.env
+aiSystemBackend/.env
+
+# Node modules
+node_modules/
+
+# Data (raw files)
+aiSystemBackend/data/raw/*.csv
+
+# Databases
+*.db
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS / Editor
+.DS_Store
+.vscode/
