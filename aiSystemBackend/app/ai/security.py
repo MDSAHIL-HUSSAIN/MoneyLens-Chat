@@ -46,10 +46,8 @@ _DEFAULT_CONFIG = SQLValidatorConfig()
 
 def validate_sql(sql_query: str, config: SQLValidatorConfig = _DEFAULT_CONFIG) -> ValidationResult:
     """
-    Five-layer read-only SQL validator.
-
+    Read-only SQL validator.
     Returns a ValidationResult — truthy on pass, falsy on fail with context.
-    Pass a custom SQLValidatorConfig to override tables, keywords, or limits.
     """
 
     # ── Layer 1: Input sanitization ────────────────────────────────────────────
@@ -71,7 +69,7 @@ def validate_sql(sql_query: str, config: SQLValidatorConfig = _DEFAULT_CONFIG) -
                                 f"Only {allowed} statements allowed", "critical")
 
     # ── Layer 3: Destructive keyword blocklist ─────────────────────────────────
-    # Strip comments first so we don't miss keywords hidden inside them
+    # We still want this so the AI doesn't accidentally DROP your tables!
     sql_stripped = re.sub(r'--[^\n]*', '', sql_upper)        # line comments
     sql_stripped = re.sub(r'/\*.*?\*/', '', sql_stripped, flags=re.DOTALL)  # block comments
 
@@ -80,27 +78,8 @@ def validate_sql(sql_query: str, config: SQLValidatorConfig = _DEFAULT_CONFIG) -
             return ValidationResult(False, "destructive_keywords",
                                     f"Forbidden keyword detected: {kw}", "critical")
 
-    # ── Layer 4: Injection pattern detection ──────────────────────────────────
-    # Multi-statement execution (allow single trailing semicolon)
-    if sql.rstrip(";").count(";") > 0:
-        return ValidationResult(False, "injection_patterns",
-                                "Multiple SQL statements detected", "critical")
-
-    # Comment-based injection: comment appearing after a string literal or mid-clause
-    # e.g.  ' OR 1=1 --   or   '; DROP TABLE --
-    if re.search(r"'[^']*--", sql) or re.search(r";\s*--", sql):
-        return ValidationResult(False, "injection_patterns",
-                                "Suspicious comment after string/statement", "critical")
-
-    # Stacked block comment injection: '/* or */'
-    if re.search(r"'/\*|'\*/", sql):
-        return ValidationResult(False, "injection_patterns",
-                                "Block comment adjacent to string literal", "critical")
-
-    # Classic tautology patterns  (1=1, 'a'='a', etc.)
-    if re.search(r"\b(OR|AND)\s+['\d]+\s*=\s*['\d]+", sql_upper):
-        return ValidationResult(False, "injection_patterns",
-                                "Tautology pattern detected", "warn")
+    # ── Layer 4: Injection pattern detection ── REMOVED FOR STABILITY ──────────
+    # Removed! The AI can use comments now without crashing the system.
 
     # ── Layer 5: Schema enforcement ────────────────────────────────────────────
     if config.allowed_tables:

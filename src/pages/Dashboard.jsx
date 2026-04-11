@@ -6,9 +6,25 @@ import ChatCards from "../components/ChatCards";
 import ChatMessage from "../components/ChatMessage";
 
 export default function Dashboard() {
-  const [messages, setMessages] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const [chats, setChats] = useState(() => {
+    const saved = localStorage.getItem("moneylens_chats");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [activeChatId, setActiveChatId] = useState(() => {
+    const savedChats = localStorage.getItem("moneylens_chats");
+    const parsed = savedChats ? JSON.parse(savedChats) : [];
+    return parsed.length > 0 ? parsed[0].id : null;
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem("moneylens_chats", JSON.stringify(chats));
+  }, [chats]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -16,10 +32,51 @@ export default function Dashboard() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [chats, activeChatId, isLoading]);
+
+  const activeChat = chats.find(c => c.id === activeChatId);
+  const messages = activeChat ? activeChat.messages : [];
+
+  const handleNewChat = () => {
+    setActiveChatId(null);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  // --- NEW: Delete Chat Logic ---
+  const handleDeleteChat = (chatIdToDelete) => {
+    // 1. Remove from state
+    setChats(prevChats => prevChats.filter(chat => chat.id !== chatIdToDelete));
+    
+    // 2. If we deleted the active chat, reset the view to "New Chat"
+    if (activeChatId === chatIdToDelete) {
+      setActiveChatId(null);
+    }
+  };
 
   const handleSendMessage = async (text) => {
-    setMessages((prev) => [...prev, { role: "user", text }]);
+    let currentChatId = activeChatId;
+
+    if (!currentChatId) {
+      const newChat = {
+        id: Date.now().toString(),
+        title: text.length > 25 ? text.substring(0, 25) + '...' : text,
+        messages: []
+      };
+      currentChatId = newChat.id;
+      setChats(prev => [newChat, ...prev]);
+      setActiveChatId(currentChatId);
+    }
+
+    setChats(prevChats => prevChats.map(chat => {
+      if (chat.id === currentChatId) {
+        return { ...chat, messages: [...chat.messages, { role: "user", text }] };
+      }
+      return chat;
+    }));
+    
     setIsLoading(true);
 
     try {
@@ -33,40 +90,68 @@ export default function Dashboard() {
       
       const data = await response.json();
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: data.level_1_simple_answer,
-          sql: data.level_2_sql_query,
-          rawData: data.level_3_raw_data,
-          plan: data.execution_plan, 
-          trustGraph: data.trustGraph // <-- ADDED THIS LINE!
-        },
-      ]);
+      setChats(prevChats => prevChats.map(chat => {
+        if (chat.id === currentChatId) {
+          return {
+            ...chat,
+            messages: [
+              ...chat.messages,
+              {
+                role: "assistant",
+                text: data.level_1_simple_answer,
+                sql: data.level_2_sql_query,
+                rawData: data.level_3_raw_data,
+                plan: data.execution_plan,
+                trustGraph: data.trustGraph
+              }
+            ]
+          };
+        }
+        return chat;
+      }));
+
     } catch (error) {
       console.error("Chat Error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: "⚠️ Couldn't connect to backend. Is the Python server running on localhost:8000?",
-        },
-      ]);
+      setChats(prevChats => prevChats.map(chat => {
+        if (chat.id === currentChatId) {
+          return {
+            ...chat,
+            messages: [
+              ...chat.messages,
+              {
+                role: "assistant",
+                text: "⚠️ Couldn't connect to backend. Is the Python server running on localhost:8000?",
+              }
+            ]
+          };
+        }
+        return chat;
+      }));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Sidebar 
+        chats={chats} 
+        activeChatId={activeChatId} 
+        onSelectChat={setActiveChatId} 
+        onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat} // <-- Pass delete function to Sidebar
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+      />
 
-      <div className="flex-1 p-6 flex flex-col relative h-full overflow-hidden">
-        <ChatHeader />
+      <div className="flex-1 p-6 flex flex-col relative h-full overflow-hidden transition-all duration-300">
+        <ChatHeader 
+          isSidebarOpen={isSidebarOpen} 
+          toggleSidebar={toggleSidebar} 
+        />
 
         <div className="flex-1 flex flex-col items-center overflow-y-auto mb-4 w-full px-4 pb-20 scrollbar-hide">
-          {messages.length === 0 ? (
+          {!activeChatId || messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-10">
               <h1 className="text-3xl font-semibold mb-2 text-gray-800">
                 What will you discover today?
@@ -101,9 +186,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {messages.length > 0 && (
+        {activeChatId && messages.length > 0 && (
           <div className="absolute bottom-6 left-0 w-full flex justify-center px-6 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-3xl">
+            <div className="pointer-events-auto w-full max-w-3xl shadow-lg rounded-xl">
               <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
             </div>
           </div>

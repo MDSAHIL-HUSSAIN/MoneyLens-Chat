@@ -24,68 +24,86 @@ class ChatRequest(BaseModel):
 
 def generate_trust_graph_payload(db_result, raw_sql):
     """
-    DETERMINISTIC GRAPH GENERATOR (0 API Calls).
-    Calculates participation scores and trust metrics purely using math.
+    DYNAMIC GRAPH GENERATOR (0 API Calls).
+    Parses the actual SQL structure and actual data returned to build provenance.
     """
+    if not db_result or "error" in str(db_result).lower():
+         return {"nodes": [], "edges": []}
+
     nodes = []
     edges = []
     
-    # 1. Base check
-    if not db_result or "error" in str(db_result).lower():
-        return {"nodes": [], "edges": []}
-
-    # 2. Logic: Did the AI use Category/Recurring rules?
-    # If the SQL contains "merchant_category" or "is_recurring", the AI 
-    # categorization engine participated heavily.
-    used_ai_categorization = "merchant_category" in raw_sql.lower() or "is_recurring" in raw_sql.lower()
+    sql_upper = raw_sql.upper()
     
-    # Calculate Participation Math
-    csv_score = 75 if used_ai_categorization else 100
-    ai_score = 25 if used_ai_categorization else 0
+    # 1. Inspect SQL for AI-Enriched columns
+    ai_features_used = []
+    if "MERCHANT_CATEGORY" in sql_upper: ai_features_used.append("merchant_category")
+    if "IS_RECURRING" in sql_upper: ai_features_used.append("is_recurring")
+    if "IS_ONLINE" in sql_upper: ai_features_used.append("is_online")
 
-    # NODE 1: The CSV Data Source
+    # 2. Extract Data Sample for the Tooltip dynamically
+    row_count = len(db_result)
+    data_preview = f"Aggregated {row_count} row(s) from Database.\n\n"
+    
+    if row_count == 1:
+        # It's an aggregate query (e.g., SUM). Show the exact keys and values!
+        for key, value in db_result[0].items():
+            data_preview += f"• {key}: {value}\n"
+    elif row_count > 1:
+        # It's a list of rows. Show a preview of the first 2 rows.
+        data_preview += "Top results extracted:\n"
+        for i, row in enumerate(db_result[:2]):
+            first_key = list(row.keys())[0]
+            first_val = list(row.values())[0]
+            data_preview += f"{i+1}. {first_key}: {first_val}\n"
+        if row_count > 2:
+            data_preview += f"...and {row_count - 2} more rows."
+
+    # 3. Calculate dynamic trust score
+    trust = 100
+    if ai_features_used: trust -= (len(ai_features_used) * 3) # Penalty for using probabilistic AI data
+    if "LIKE" in sql_upper: trust -= 2 # Penalty for fuzzy matching
+
+    # NODE 1: Core Database Root
     nodes.append({
-        "id": "source-csv",
+        "id": "source-db",
         "position": { "x": 50, "y": 50 },
         "type": "sourceNode",
         "data": { 
-            "label": "Bank Statement Data", 
-            "score": csv_score, 
-            "details": f"Raw SQL execution returned {len(db_result)} aggregated data blocks.\nProvided foundational financial truths."
+            "label": "Local SQLite: transactions", 
+            "score": 100 if not ai_features_used else 70, 
+            "details": f"Query executed successfully.\nColumns referenced: {sql_upper.count('SELECT')} SELECT block(s).\nConditions applied: {sql_upper.count('WHERE')} WHERE clause(s)."
         }
     })
     
-    # NODE 2: AI Enrichment (Only show if categories/recurring flags were used)
-    if used_ai_categorization:
+    # NODE 2: AI Enrichment (Dynamic)
+    if ai_features_used:
         nodes.append({
             "id": "source-ai",
             "position": { "x": 50, "y": 180 },
             "type": "sourceNode",
             "data": { 
-                "label": "Gemini Categorization Engine", 
-                "score": ai_score, 
-                "details": "Data was enriched using AI models to determine merchant categories or subscription flags."
+                "label": "AI Enrichment Layer", 
+                "score": 30, 
+                "details": f"Probabilistic columns used:\n{', '.join(ai_features_used)}\n\nThese columns were inferred by AI during data ingestion."
             }
         })
 
-    # NODE 3: The Final Answer
-    trust_score = 98 if not used_ai_categorization else 92 # Slight penalty if fuzzy AI categories used
-    
+    # NODE 3: Final Computed Result
     nodes.append({
         "id": "final-answer",
-        # FIXED: Changed JS syntax to Python syntax here 👇
-        "position": { "x": 400, "y": 115 if used_ai_categorization else 50 },
+        "position": { "x": 400, "y": 115 if ai_features_used else 50 },
         "type": "finalNode",
         "data": { 
-            "label": "Aggregated Insight", 
-            "trustScore": trust_score, 
-            "details": f"100% SQL Success.\nQuery Pattern Match: Verified."
+            "label": "Analyzed Insight", 
+            "trustScore": trust, 
+            "details": data_preview # Injecting the actual data values here!
         }
     })
 
     # Create connecting lines
-    edges.append({ "id": "e1", "source": "source-csv", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
-    if used_ai_categorization:
+    edges.append({ "id": "e1", "source": "source-db", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
+    if ai_features_used:
         edges.append({ "id": "e2", "source": "source-ai", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
 
     return { "nodes": nodes, "edges": edges }
@@ -99,24 +117,28 @@ def process_user_query(user_question: str):
     print("🧠 Query Planner is mapping the logic...")
     plan = generate_query_plan(safe_query)
     
+    if not plan.get("requires_data", True):
+        print("👋 Conversational intent detected. Skipping SQL engine.")
+        return {
+            "question": user_question,
+            "level_1_simple_answer": plan.get("direct_answer", "Hello! I am MoneyLens. How can I help you analyze your finances today?"),
+            "level_2_sql_query": None,
+            "level_3_raw_data": None,
+            "execution_plan": None,
+            "trustGraph": None
+        }
+    
     print("👨‍💻 SQL Generator is writing dynamic code...")
     raw_sql = generate_sql(safe_query, plan)
+    print(f"\n🔍 [DEBUG] RAW SQL GENERATED BY AI:\n{raw_sql}\n")
     
-    # NEW: Let's print exactly what the AI generated so we can see why it's failing
-    print(f"🔍 [DEBUG] Raw Output from AI:\n{raw_sql}\n")
-    
-    # Store the validation object so we can read the error reason
-    validation = validate_sql(raw_sql)
-    
-    if not validation:
-        # Extract the exact reason your security layer blocked it
-        reason = getattr(validation, 'reason', 'Unknown reason')
-        layer = getattr(validation, 'layer', 'Unknown layer')
-        
-        print(f"❌ Security Blocked! Layer: {layer} | Reason: {reason}")
-        
+    validation_result = validate_sql(raw_sql)
+    if not validation_result:
+        reason = getattr(validation_result, 'reason', 'Unknown reason')
+        layer = getattr(validation_result, 'layer', 'Unknown layer')
+        print(f"❌ [DEBUG] Security blocked! Layer: {layer} | Reason: {reason}")
         return {
-            "level_1_simple_answer": f"Security check blocked this query. (Reason: {reason})",
+            "level_1_simple_answer": f"Security check blocked this query.\n\nDebug Info -> Layer: {layer} | Reason: {reason}",
             "level_2_sql_query": raw_sql,
             "level_3_raw_data": None,
             "execution_plan": plan,
@@ -126,10 +148,37 @@ def process_user_query(user_question: str):
     print("⚙️ Execution Engine running SQL...")
     db_result = execute_sql(raw_sql)
     
+    # --- NEW: CATCH-ALL EXECUTION GATES ---
+    
+    # Bucket 3: Execution Failure (SQL Syntax Error / Hallucinated Column)
+    if isinstance(db_result, dict) and "error" in db_result.get("error", "").lower():
+        print(f"❌ [DEBUG] Database Error: {db_result['error']}")
+        return {
+            "question": user_question,
+            "level_1_simple_answer": "I understood your request, but I made a technical error while trying to fetch the data. Please try rephrasing your question.",
+            "level_2_sql_query": raw_sql.strip(),
+            "level_3_raw_data": [db_result], # Wrap in list so UI table can render the error cleanly
+            "execution_plan": plan,
+            "trustGraph": generate_trust_graph_payload([], raw_sql) # Empty graph
+        }
+
+    # Bucket 4: Zero-Data Failure (Valid SQL, but no data matches)
+    if not db_result or len(db_result) == 0:
+        print("⚠️ [DEBUG] Query succeeded but returned 0 rows.")
+        return {
+            "question": user_question,
+            "level_1_simple_answer": "I successfully searched your records, but I couldn't find any transactions matching that exact request.",
+            "level_2_sql_query": raw_sql.strip(),
+            "level_3_raw_data": [],
+            "execution_plan": plan,
+            "trustGraph": generate_trust_graph_payload([], raw_sql)
+        }
+        
+    # --------------------------------------
+    
     print("🗣️ Final Explainer is generating insights...")
     final_answer = generate_explanation(safe_query, db_result)
     
-    # Generate graph instantly using pure python math
     graph_payload = generate_trust_graph_payload(db_result, raw_sql)
     
     return {

@@ -1,4 +1,3 @@
-
 import json
 import time
 import re
@@ -17,14 +16,21 @@ def extract_json_from_text(text: str) -> dict:
 
 def generate_query_plan(safe_query: str) -> dict:
     prompt = f"""
-    You are a Master Data Architect. Analyze this user query: "{safe_query}"
-    Create a logical, step-by-step mathematical execution plan to solve this.
+    You are a Master Data Architect and Financial Assistant. 
+    Analyze this user query: "{safe_query}"
+    
+    INTENT ROUTING RULE:
+    - If the user is just saying hello, asking who you are, or making small talk, you DO NOT need data. Set "requires_data" to false and provide a friendly "direct_answer".
+    - If the user is asking about spending, transactions, or finances, you DO need data. Set "requires_data" to true.
+    
     Database Schema: {DB_SCHEMA}
     Semantic Rules: {SEMANTIC_DICTIONARY}
     
-    Return ONLY a JSON dictionary with these keys. Do not add any conversational text.
+    Return ONLY a JSON dictionary with these exact keys. Do not add any conversational text outside the JSON.
     {{
-        "analytical_goal": "A short string describing the objective",
+        "requires_data": true,
+        "direct_answer": "If requires_data is false, put your friendly response here (e.g., 'Hello! I am MoneyLens, your AI financial assistant...'). Otherwise leave empty.",
+        "analytical_goal": "A short string describing the objective (if data is needed)",
         "logical_steps": ["Step 1...", "Step 2..."]
     }}
     """
@@ -36,7 +42,7 @@ def generate_query_plan(safe_query: str) -> dict:
             print(f"   ⚠️ [Planner API Error Attempt {attempt+1}]: {e}")
             time.sleep(4) 
                 
-    return {"analytical_goal": "Fallback execution", "logical_steps": ["Analyze the query and write direct SQL"]}
+    return {"requires_data": True, "analytical_goal": "Fallback execution", "logical_steps": ["Analyze the query and write direct SQL"]}
 
 def generate_sql(safe_query: str, plan: dict) -> str:
     prompt = f"""
@@ -51,15 +57,30 @@ def generate_sql(safe_query: str, plan: dict) -> str:
     
     Rules:
     1. Output ONLY the raw SQL query string. No markdown (```sql).
-    2. CRITICAL: You MUST follow the Execution Plan exactly. Do not ignore the logical steps provided.
+    2. CRITICAL: You MUST follow the Execution Plan exactly.
     3. Always include the `currency` column in your SELECT statement if aggregating amounts.
     4. Use LIMIT 10 if returning raw transaction rows.
-    5. CRITICAL: If you calculate a SUM, MIN, or MAX, you MUST include it in the SELECT clause (e.g., SELECT currency, SUM(amount) AS total...).
+    5. CRITICAL: If you calculate a SUM, MIN, or MAX, you MUST include it in the SELECT clause.
+    6. CRITICAL RULE: Output EXACTLY ONE single executable SQL statement. You must NOT output multiple queries separated by semicolons. If you need multiple steps, use CTEs (WITH clause), but they MUST culminate in ONE final SELECT statement.
     """
     for attempt in range(3):
         try:
             response_text = call_llm(prompt, REASONING_MODEL)
-            return response_text.replace('```sql', '').replace('```', '').strip()
+            
+            cleaned = response_text.replace('```sql', '').replace('```', '').strip()
+            
+            # Look for SELECT/WITH and grab everything up to the very last semicolon
+            sql_match = re.search(r'(?i)(SELECT|WITH)[\s\S]*;', cleaned)
+            
+            if sql_match:
+                return sql_match.group(0).strip()
+            
+            # Fallback just in case the AI forgot a semicolon
+            fallback_match = re.search(r'(?i)(SELECT|WITH)[\s\S]*', cleaned)
+            if fallback_match:
+                return fallback_match.group(0).strip()
+            
+            return cleaned
         except Exception as e:
             print(f"   ⚠️ [SQL Generator API Error Attempt {attempt+1}]: {e}")
             time.sleep(4)
