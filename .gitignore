@@ -10,10 +10,8 @@ aiSystemBackend/.env
 node_modules/
 
 # Data (raw files)
-aiSystemBackend/data/raw/*.csv
 
 # Databases
-*.db
 *.sqlite3
 
 # Python cache

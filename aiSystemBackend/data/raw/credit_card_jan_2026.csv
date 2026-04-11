@@ -1,0 +1,31 @@
+transaction_id,transaction_date,posting_date,amount,currency,transaction_type,merchant_name,description
+TXN001,1/1/2026,1/1/2026,250,INR,debit,Swiggy,Swiggy food order
+TXN002,1/1/2026,1/2/2026,1200,INR,debit,Amazon,Amazon purchase electronics
+TXN003,1/2/2026,1/2/2026,499,INR,debit,Netflix,Netflix monthly subscription
+TXN004,1/3/2026,1/3/2026,300,INR,debit,Uber,Uber ride payment
+TXN005,1/4/2026,1/4/2026,1500,INR,debit,Flipkart,Clothing purchase
+TXN006,1/5/2026,1/5/2026,200,INR,debit,Starbucks,Coffee purchase
+TXN007,1/6/2026,1/6/2026,999,INR,debit,Spotify,Spotify subscription
+TXN008,1/7/2026,1/7/2026,1800,INR,debit,MakeMyTrip,Flight booking
+TXN009,1/8/2026,1/8/2026,450,INR,debit,Dominos,Pizza order
+TXN010,1/9/2026,1/9/2026,2200,INR,debit,Apple,App Store purchase
+TXN011,1/10/2026,1/10/2026,5000,INR,debit,Airbnb,Hotel booking
+TXN012,1/11/2026,1/11/2026,120,INR,debit,Metro,Metro recharge
+TXN013,1/12/2026,1/12/2026,350,INR,debit,Swiggy,Food delivery
+TXN014,1/13/2026,1/13/2026,275,INR,debit,Zomato,Zomato order
+TXN015,1/14/2026,1/14/2026,800,INR,debit,Amazon,Home essentials
+TXN016,1/15/2026,1/15/2026,12000,INR,credit,Salary,Monthly salary credit
+TXN017,1/16/2026,1/16/2026,600,INR,debit,Uber,Uber ride
+TXN018,1/17/2026,1/17/2026,2000,INR,debit,Decathlon,Sports purchase
+TXN019,1/18/2026,1/18/2026,150,INR,debit,Starbucks,Coffee
+TXN020,1/19/2026,1/19/2026,499,INR,debit,Netflix,Netflix subscription
+TXN021,1/20/2026,1/20/2026,3500,INR,debit,IRCTC,Train ticket
+TXN022,1/21/2026,1/21/2026,700,INR,debit,Swiggy,Food order
+TXN023,1/22/2026,1/22/2026,450,INR,debit,Dominos,Pizza delivery
+TXN024,1/23/2026,1/23/2026,1000,INR,debit,Amazon,Electronics accessory
+TXN025,1/24/2026,1/24/2026,299,INR,debit,YouTube,YouTube Premium subscription
+TXN026,1/25/2026,1/25/2026,650,INR,debit,Zomato,Dinner order
+TXN027,1/26/2026,1/26/2026,1200,INR,debit,Flipkart,Shopping purchase
+TXN028,1/27/2026,1/27/2026,200,INR,debit,Metro,Metro recharge
+TXN029,1/28/2026,1/28/2026,1800,INR,debit,MakeMyTrip,Bus booking
+TXN030,1/29/2026,1/29/2026,400,INR,debit,Swiggy,Food order
