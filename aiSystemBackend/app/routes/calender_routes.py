@@ -5,11 +5,32 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import os
+import base64
+import tempfile
 
 router = APIRouter()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
+CREDENTIALS_B64 = os.getenv("GOOGLE_CREDENTIALS_B64")
+
+# Use OS-appropriate temp directory
+TEMP_DIR = tempfile.gettempdir()
+CREDENTIALS_FILE = os.path.join(TEMP_DIR, "google_credentials.json")
+
+if CREDENTIALS_B64:
+    # Decode base64 and write to temp file
+    try:
+        credentials_data = base64.b64decode(CREDENTIALS_B64)
+        with open(CREDENTIALS_FILE, "wb") as f:
+            f.write(credentials_data)
+    except Exception as e:
+        print(f"⚠️ Failed to write credentials: {e}")
+else:
+    # Fallback for local development
+    CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
+
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
 TOKEN_FILE = os.path.join(BASE_DIR, "token.json")
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
