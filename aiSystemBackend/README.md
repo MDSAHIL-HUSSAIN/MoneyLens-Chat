@@ -258,6 +258,59 @@ Place your credit card statement CSVs inside:
 aiSystemBackend/data/raw/
 ```
 
+---
+
+#### 📄 Expected CSV Schema
+
+The pipeline expects a specific column structure. Each row represents a single financial transaction.
+
+##### 🧾 Required Columns
+
+| Column Name | Type | Description |
+|---|---|---|
+| `transaction_id` | `string` | Unique identifier for each transaction (e.g., `TXN001`) |
+| `transaction_date` | `date` | Date the transaction occurred — accepts `MM/DD/YYYY` or `M/D/YYYY`; auto-converted to `YYYY-MM-DD` internally |
+| `posting_date` | `date` | Date the transaction was posted or settled by the bank |
+| `amount` | `float` | Transaction value — numeric only, no currency symbols |
+| `currency` | `string` | ISO currency code (e.g., `INR`) |
+| `transaction_type` | `enum` | Must be exactly `debit` or `credit` (case-sensitive) |
+| `merchant_name` | `string` | Merchant name used for AI enrichment and category detection (e.g., `Swiggy`, `Amazon`) |
+| `description` | `string` | Additional transaction context — used by the AI for recurring and category classification |
+
+> Column names are **case-sensitive** and must match exactly. The pipeline will reject the file if any required column is missing or misnamed (e.g., `amt` instead of `amount`).
+
+##### 📌 Example CSV
+
+```csv
+transaction_id,transaction_date,posting_date,amount,currency,transaction_type,merchant_name,description
+TXN001,1/1/2026,1/1/2026,250,INR,debit,Swiggy,Swiggy food order
+TXN002,1/1/2026,1/2/2026,1200,INR,debit,Amazon,Amazon purchase electronics
+TXN003,1/2/2026,1/2/2026,499,INR,debit,Netflix,Netflix monthly subscription
+```
+
+##### ⚙️ What the Pipeline Does to Each Row
+
+Once a valid CSV is loaded, `data_pipeline.py` processes every row through three stages before writing to `finance.db`:
+
+1. **Normalisation** — `transaction_date` and `posting_date` are parsed and stored as `YYYY-MM-DD`. `billing_cycle_month` and `billing_cycle_year` are derived from `transaction_date` for time-range queries.
+2. **AI Enrichment** — Gemini classifies each transaction and appends three fields: `merchant_category` (e.g., `Food`, `Subscriptions`, `Travel`), `is_recurring` (`true`/`false`), and `is_online` (`true`/`false`).
+3. **Deduplication** — Each CSV file is fingerprinted by its SHA-256 hash before ingestion. Re-uploading the same file is a no-op; no duplicate rows are inserted.
+
+##### ❌ Common Validation Failures
+
+The pipeline will raise an error and halt — no partial data is written — if:
+
+- A required column is missing or misspelled
+- `amount` contains non-numeric characters (e.g., `₹250` or `"250"`)
+- `transaction_type` is not exactly `debit` or `credit`
+- Date fields contain non-date values
+
+##### 💡 Recommendation
+
+Use the sample CSV files in `data/raw/` as a template to ensure compatibility before ingesting your own bank export.
+
+---
+
 **Step 6.2 — Run the data pipeline**
 
 ```bash

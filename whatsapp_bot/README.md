@@ -253,8 +253,5 @@ Receives incoming WhatsApp messages. For each message:
 ## ⚠️ Limitations
 
 - The WhatsApp bot returns the Level 1 plain English answer only — full SQL, execution plan, and trust graph require the web dashboard.
-- CSV upload is not supported via WhatsApp; data ingestion must be done through the dashboard.
 - Meta WhatsApp Business API requires an approved Meta Developer app; sandbox testing is limited to verified phone numbers.
-- Conversation history is stored in PostgreSQL but not surfaced to the user via WhatsApp.
 - The bot processes one message at a time; concurrent high-volume messaging may require a queue-based architecture.
-- Timezone and locale are not configurable per user; responses follow the AI backend defaults.

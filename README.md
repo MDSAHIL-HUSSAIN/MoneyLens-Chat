@@ -16,6 +16,13 @@ Users upload their bank statement CSV, then talk with their data via a web dashb
 
 ---
 
+## 🎬 Demo
+
+[▶️ Watch Demo](utility/MoneyLensChat.mp4)
+> 📺 *Full walkthrough — natural language queries, Trust Graph, subscription reminders, and WhatsApp integration in action.*
+
+---
+
 ## ❗ Problem Statement
 
 People generate significant credit card transaction data every month but face real barriers:
