@@ -1,16 +1,28 @@
 # 📱 MoneyLens — WhatsApp Bot
 
-The WhatsApp integration for MoneyLens. A Node.js + TypeScript server that receives messages from users on WhatsApp, forwards them to the AI backend, and returns short, instant answers — making financial queries accessible without opening a browser.
+The WhatsApp integration for MoneyLens. Built with Node.js + TypeScript + Prisma + PostgreSQL + Meta Business API. Users send natural language questions about their credit card transactions directly on WhatsApp and receive instant, accurate answers powered by the MoneyLens AI backend.
 
 ---
 
 ## 📌 What This Module Does
 
-- Listens for incoming WhatsApp messages via Twilio webhook.
-- Passes the user's question to the MoneyLens AI backend (`ai.service.ts`).
-- Returns a concise, conversational answer back to the user on WhatsApp (`whatsapp.service.ts`).
-- Stores conversation context using Prisma ORM so follow-up questions are handled correctly.
-- Runs as a standalone Express server, independent of the frontend dashboard.
+- Receives incoming WhatsApp messages via the Meta Business API webhook (`POST /webhook`).
+- Forwards user questions to the MoneyLens AI backend (`/api/chat`) via HTTP.
+- Returns the plain English (Level 1) insight back to the user on WhatsApp.
+- Stores all conversation messages in PostgreSQL via Prisma for history and audit.
+- Sends outgoing replies via the WhatsApp Platform (Meta Cloud API).
+
+---
+
+## 🏗️ Architecture
+
+### WhatsApp Bot Architecture
+
+![WhatsApp Bot Architecture](../utility/whatsappBotArchitrecture.png)
+
+### WhatsApp Features — Live Demo
+
+![WhatsApp Features Demo](../utility/whatsapp%20features%20visulaization.png)
 
 ---
 
@@ -22,16 +34,20 @@ whatsapp_bot/
 │   ├── lib/
 │   │   └── prisma.ts               # Prisma client singleton
 │   ├── routes/
-│   │   └── whatsapp.routes.ts      # POST /webhook — Twilio inbound message handler
+│   │   └── whatsapp.routes.ts      # Webhook GET (verification) + POST (message handler)
 │   └── services/
-│       ├── ai.service.ts           # Calls aiSystemBackend API, formats response
-│       └── whatsapp.service.ts     # Sends reply back via Twilio WhatsApp API
+│       ├── ai.service.ts           # HTTP client — calls MoneyLens AI backend
+│       └── whatsapp.service.ts     # Meta Cloud API — sends outgoing messages
+├── prisma/
+│   └── schema.prisma               # PostgreSQL schema — Message model
 ├── config.ts                       # Environment variable loading
 ├── index.ts                        # Express app entry point
-├── prisma/                         # Prisma schema + migrations
-├── .env.example
 ├── package.json
-└── tsconfig.json
+├── package-lock.json
+├── tsconfig.json
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
 ---
@@ -41,118 +57,205 @@ whatsapp_bot/
 | Layer | Technology |
 |---|---|
 | Language | TypeScript |
-| Runtime | Node.js 18 |
-| Framework | Express.js |
+| Runtime | Node.js |
+| Framework | Express |
 | ORM | Prisma |
-| WhatsApp API | Twilio WhatsApp API |
-| AI Bridge | HTTP calls to `aiSystemBackend` |
+| Database | PostgreSQL |
+| Messaging API | Meta Cloud API (WhatsApp Business) |
+| Build | tsc (TypeScript compiler) |
 
 ---
 
-## 🔧 Install & Run
+## 🧾 Prerequisites
 
-### Prerequisites
-- Node.js 18 or higher
-- A Twilio account with a WhatsApp-enabled sandbox or number
-- AI backend running (see `aiSystemBackend/README.md`)
-- A public URL for the Twilio webhook (use [ngrok](https://ngrok.com) for local dev)
+- **Node.js v18 or higher** — [https://nodejs.org](https://nodejs.org)
+- **PostgreSQL** — local instance or a hosted service (e.g., Supabase, Railway, Render)
+- **Meta Developer Account** with a WhatsApp Business app approved and a test phone number
+- **MoneyLens AI Backend** running and accessible (locally or deployed)
+- `git`
 
-### 1. Navigate to this folder
+---
+
+## ⚙️ Install & Run
+
+### Step 1 — Navigate to This Folder
+
+**Mac / Linux:**
 ```bash
 cd whatsapp_bot
 ```
 
-### 2. Set up environment variables
-```bash
-cp .env.example .env
-# Fill in:
-# TWILIO_ACCOUNT_SID=...
-# TWILIO_AUTH_TOKEN=...
-# TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-# AI_BACKEND_URL=http://localhost:8000
-# DATABASE_URL=file:./dev.db
+**Windows:**
+```cmd
+cd whatsapp_bot
 ```
 
-### 3. Install dependencies
+---
+
+### Step 2 — Install Dependencies
+
 ```bash
 npm install
 ```
 
-### 4. Set up the Prisma database
+---
+
+### Step 3 — Configure Environment Variables
+
+**Mac / Linux:**
 ```bash
-npx prisma migrate dev --name init
+cp .env.example .env
 ```
 
-### 5. Start the server
+**Windows:**
+```cmd
+copy .env.example .env
+```
+
+Open `.env` and fill in all required values:
+
+```properties
+# Meta WhatsApp Business API
+WHATSAPP_TOKEN=your_meta_whatsapp_access_token
+VERIFY_TOKEN=your_custom_webhook_verify_token
+PHONE_NUMBER_ID=your_whatsapp_phone_number_id
+
+# PostgreSQL (Prisma)
+DATABASE_URL=postgresql://user:password@localhost:5432/moneylens
+
+# MoneyLens AI Backend
+AI_API_URL=http://localhost:8000
+```
+
+> **`VERIFY_TOKEN`** — set this to any string you choose. You will enter the same string in the Meta Developer Console when configuring the webhook.
+
+---
+
+### Step 4 — Set Up the Database
+
+Generate the Prisma client and run migrations:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+
+---
+
+### Step 5 — Build and Start
+
+**Build:**
+```bash
+npm run build
+```
+
+**Start:**
+```bash
+npm start
+```
+
+**Or run in development mode (no build required):**
 ```bash
 npm run dev
-# Bot server: http://localhost:3001
 ```
 
-### 6. Expose to Twilio using ngrok (local dev only)
+**Expected output:**
+```
+Server running on port 3001
+```
+
+---
+
+### Step 6 — Expose the Webhook (Local Development)
+
+Meta requires a publicly accessible HTTPS URL for the webhook. Use [ngrok](https://ngrok.com) to expose your local server:
+
 ```bash
 ngrok http 3001
-# Copy the HTTPS URL and set it as your Twilio webhook:
-# https://<your-ngrok-id>.ngrok.io/webhook
 ```
 
-In your Twilio Console → WhatsApp Sandbox → set the webhook to:
-```
-https://<your-ngrok-id>.ngrok.io/webhook
-```
+Copy the HTTPS forwarding URL (e.g., `https://abc123.ngrok.io`).
 
 ---
 
-## 📡 Webhook
+### Step 7 — Configure the Meta Webhook
+
+1. Go to [Meta Developer Console](https://developers.facebook.com) → Your App → WhatsApp → Configuration.
+2. Set **Webhook URL** to:
+   ```
+   https://abc123.ngrok.io/webhook
+   ```
+3. Set **Verify Token** to the same value as `VERIFY_TOKEN` in your `.env`.
+4. Subscribe to the **messages** webhook field.
+5. Click **Verify and Save**.
+
+---
+
+## 🧪 Usage
+
+Once running, send a WhatsApp message to your Meta test phone number:
+
+```
+You:        Which merchant charged me the most this month?
+MoneyLens:  It looks like Airbnb charged you the most this month, with a total of ₹5000 spent.
+```
+
+```
+You:        Suggest me ways to decrease my credit card interest
+MoneyLens:  To help decrease your credit card interest, consider reviewing your recurring
+            spending, which totals ₹2,296. By reducing these regular expenses, you can
+            free up funds to pay down your credit card balance faster and save on interest.
+```
+
+> The bot returns the **Level 1 plain English answer only**. Full SQL, execution plan, and trust graph are available on the web dashboard.
+
+---
+
+## 📡 API Reference
+
+### `GET /webhook`
+
+Handles Meta webhook verification. Meta sends a `hub.challenge` parameter; the bot echoes it back if the `hub.verify_token` matches `VERIFY_TOKEN`.
 
 ### `POST /webhook`
-Twilio calls this endpoint when a WhatsApp message is received.
 
-Twilio sends:
-```
-Body=How+much+did+I+spend+this+month%3F
-From=whatsapp:+919876543210
-```
-
-Bot replies via Twilio API:
-```
-You spent ₹18,750 this month across 43 transactions.
-```
+Receives incoming WhatsApp messages. For each message:
+1. Stores the incoming message in PostgreSQL via Prisma.
+2. Calls `AI_API_URL/api/chat` with the message text.
+3. Extracts `level_1_simple_answer` from the AI response.
+4. Sends the answer back to the user via the Meta Cloud API.
+5. Stores the outgoing reply in PostgreSQL.
 
 ---
 
-## 🧪 Usage Example
+## 🔐 Security Notes
 
-1. Save the Twilio sandbox WhatsApp number in your contacts.
-2. Send the sandbox join keyword (e.g. *join galaxy-planet*) to activate.
-3. Ask any financial question:
-
-```
-You:        Show my top 3 merchants this month
-MoneyLens:  1. Swiggy — ₹3,150
-            2. Amazon — ₹2,840
-            3. Zomato — ₹1,920
-```
-
-```
-You:        When is my credit card due?
-MoneyLens:  Your HDFC card is due on April 28. Minimum due: ₹2,400.
-            I've added a reminder to your Google Calendar.
-```
+- All credentials are loaded from environment variables — no hardcoded tokens.
+- `VERIFY_TOKEN` is used to validate that webhook requests originate from Meta.
+- `WHATSAPP_TOKEN` is a Meta-issued access token — keep it secret and never commit it.
+- `DATABASE_URL` contains credentials — never commit `.env` to the repository.
 
 ---
 
-## 🔐 Notes
+## 🛠️ Common Issues
 
-- Twilio credentials are loaded from `.env` only — never hardcoded.
-- The bot sends only short summary answers, not full SQL or raw data (that is reserved for the dashboard).
-- Message history per user is stored in Prisma DB to support follow-up questions within a session.
+| Problem | Fix |
+|---|---|
+| `Cannot find module` errors | Run `npm install` and `npm run build` before `npm start` |
+| `DATABASE_URL` connection error | Check PostgreSQL is running and the URL in `.env` is correct |
+| Webhook verification fails | Ensure `VERIFY_TOKEN` in `.env` matches what you entered in the Meta console |
+| Bot receives messages but does not reply | Check `AI_API_URL` is reachable and the backend is running |
+| `WHATSAPP_TOKEN` invalid | Regenerate the token in the Meta Developer Console |
+| Port 3001 already in use | Change the port in `index.ts` and update the ngrok command |
+| Prisma migration error | Run `npx prisma migrate dev` for local development environments |
 
 ---
 
 ## ⚠️ Limitations
 
-- The Twilio WhatsApp sandbox allows messages only to/from numbers that have joined it; production requires a Twilio-approved WhatsApp Business number.
-- Free Twilio sandbox has a 24-hour messaging window limit per user.
-- Google Calendar reminder creation requires the user to have completed the OAuth flow via the dashboard first.
-- The bot does not support image or document uploads; CSV ingestion must be done via the dashboard.
+- The WhatsApp bot returns the Level 1 plain English answer only — full SQL, execution plan, and trust graph require the web dashboard.
+- CSV upload is not supported via WhatsApp; data ingestion must be done through the dashboard.
+- Meta WhatsApp Business API requires an approved Meta Developer app; sandbox testing is limited to verified phone numbers.
+- Conversation history is stored in PostgreSQL but not surfaced to the user via WhatsApp.
+- The bot processes one message at a time; concurrent high-volume messaging may require a queue-based architecture.
+- Timezone and locale are not configurable per user; responses follow the AI backend defaults.

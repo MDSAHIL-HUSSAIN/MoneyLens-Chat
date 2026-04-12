@@ -15,6 +15,14 @@ The chat-based web dashboard for MoneyLens. Built with React + TypeScript + Vite
 
 ---
 
+## 📸 Screenshots
+
+### Dashboard — Chat Interface with Subscription Reminders
+
+![Dashboard Chat Interface](../utility/calandervisualization.png)
+
+---
+
 ## 🗂️ Folder Structure
 
 ```
