@@ -13,13 +13,16 @@ CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
 TOKEN_FILE = os.path.join(BASE_DIR, "token.json")
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
+# Get backend URL from environment, default to localhost for development
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
 # ← Store flow between login and callback
 flow_store = {}
 
 @router.get("/auth/login")
 def login():
     flow = Flow.from_client_secrets_file(CREDENTIALS_FILE, scopes=SCOPES,
-        redirect_uri="http://localhost:8000/auth/callback")
+        redirect_uri=f"{BACKEND_URL}/auth/callback")
     auth_url, state = flow.authorization_url(
         prompt="consent",
         access_type="offline",
