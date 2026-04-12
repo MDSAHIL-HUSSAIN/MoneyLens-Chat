@@ -23,3 +23,6 @@ __pycache__/
 .DS_Store
 .vscode/
 >>>>>>> efe3301f77ff20a0c60493b8f5915c4582f31740
+
+credentials.json
+token.json

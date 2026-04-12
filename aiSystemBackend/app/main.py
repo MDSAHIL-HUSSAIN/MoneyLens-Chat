@@ -5,10 +5,12 @@ import uvicorn
 import re
 import time
 import difflib
+from datetime import datetime
 
 from app.ai.security import scrub_pii, validate_sql
 from app.ai.agents import generate_sql_with_plan, generate_explanation
 from app.db.database import execute_sql 
+from app.routes.calender_routes import router as calendar_router
 
 app = FastAPI(title="MoneyLens API")
 
@@ -20,11 +22,105 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(calendar_router)
+
 class ChatRequest(BaseModel):
     message: str
 
 # --- THE SEMANTIC CACHE ---
 QUERY_CACHE = []
+
+# --- SUBSCRIPTION EXTRACTION ---
+MONTH_TO_NUM = {
+    'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
+    'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+}
+
+def is_subscription_query(raw_sql: str) -> bool:
+    """Check if the SQL query is about subscriptions (contains is_recurring reference)."""
+    return 'IS_RECURRING' in raw_sql.upper()
+
+def extract_expiring_subscriptions(db_result, raw_sql: str) -> list:
+    """Extract subscription details from query results and filter for expiring ones.
+    
+    Returns: List of dicts with {name, amount, currency, expiry_month, expiry_year, expiry_date_str}
+    """
+    if not is_subscription_query(raw_sql) or not db_result or "error" in str(db_result).lower():
+        return []
+    
+    subscriptions = []
+    current_date = datetime.strptime("2026-04-12", "%Y-%m-%d")
+    
+    for row in db_result:
+        # Note: SQL WHERE clause already filters for is_recurring=1 and transaction_type='debit',
+        # so we trust the data is already filtered
+        if not isinstance(row, dict):
+            continue
+            
+        # Extract required fields
+        merchant_name = row.get('merchant_name') or 'Subscription'
+        amount = row.get('amount') or row.get('last_payment_amount', 0)
+        currency = row.get('currency', 'INR')
+        
+        # Try to get billing_cycle_month and billing_cycle_year from result
+        month_str = row.get('billing_cycle_month', '')
+        year = row.get('billing_cycle_year', 0)
+        
+        # If not in results, try to derive from transaction_date or last_payment_date
+        if not month_str or not year:
+            transaction_date_str = row.get('transaction_date') or row.get('last_payment_date')
+            if transaction_date_str:
+                try:
+                    # Parse transaction date (should be YYYY-MM-DD format)
+                    trans_date = datetime.strptime(str(transaction_date_str), "%Y-%m-%d")
+                    month_str = trans_date.strftime("%B")  # e.g., "April"
+                    year = trans_date.year
+                except (ValueError, TypeError) as e:
+                    print(f"  ⚠️ Failed to parse date {transaction_date_str}: {e}")
+                    continue
+        
+        if not month_str or not year:
+            continue
+        
+        # Convert month name to number
+        month_num = MONTH_TO_NUM.get(month_str, 0)
+        if month_num == 0:
+            print(f"  ⚠️ Unknown month: {month_str}")
+            continue
+        
+        # Create expiry date (using first day of next month as expiry)
+        try:
+            if month_num == 12:
+                expiry_date = datetime(year + 1, 1, 1)
+            else:
+                expiry_date = datetime(year, month_num + 1, 1)
+            
+            # Only include if expiry is in the future
+            if expiry_date > current_date:
+                subscriptions.append({
+                    "name": merchant_name,
+                    "amount": float(amount) if amount else 0,
+                    "currency": currency,
+                    "expiry_month": month_str,
+                    "expiry_year": year,
+                    "expiry_date_str": expiry_date.strftime("%Y-%m-%d")
+                })
+            else:
+                print(f"  ⏰ {merchant_name} expired on {expiry_date.date()}")
+        except (ValueError, TypeError) as e:
+            print(f"  ⚠️ Failed to process {merchant_name}: {e}")
+            continue
+    
+    # Remove duplicates (same subscription name and date)
+    seen = set()
+    unique_subs = []
+    for sub in subscriptions:
+        key = (sub['name'], sub['expiry_date_str'])
+        if key not in seen:
+            seen.add(key)
+            unique_subs.append(sub)
+    
+    return unique_subs
 
 def get_cached_query(query: str):
     query_lower = query.lower().strip()
@@ -100,7 +196,8 @@ def process_user_query(user_question: str):
             "level_2_sql_query": None,
             "level_3_raw_data": None,
             "execution_plan": None,
-            "trustGraph": None
+            "trustGraph": None,
+            "expiring_subscriptions": []
         }
     
     raw_sql = plan_and_sql.get("sql_query", "")
@@ -112,12 +209,18 @@ def process_user_query(user_question: str):
             "level_2_sql_query": raw_sql,
             "level_3_raw_data": None,
             "execution_plan": execution_plan,
-            "trustGraph": None
+            "trustGraph": None,
+            "expiring_subscriptions": []
         }
     
     print("⚙️ Execution Engine running SQL...")
     db_result = execute_sql(raw_sql)
     graph_payload = generate_trust_graph_payload(db_result, raw_sql)
+    
+    # Extract expiring subscriptions if this is a subscription query
+    expiring_subscriptions = extract_expiring_subscriptions(db_result, raw_sql)
+    if expiring_subscriptions:
+        print(f"🔔 Found {len(expiring_subscriptions)} expiring subscription(s)")
 
     # We must still generate an explanation because the data might have changed 
     # even if the SQL query was cached!
@@ -133,7 +236,8 @@ def process_user_query(user_question: str):
         "level_2_sql_query": raw_sql.strip(),
         "level_3_raw_data": db_result,
         "execution_plan": execution_plan,
-        "trustGraph": graph_payload
+        "trustGraph": graph_payload,
+        "expiring_subscriptions": expiring_subscriptions
     }
 
 @app.post("/api/chat")

@@ -1,14 +1,15 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, onDeleteChat, isOpen, toggleSidebar }) {
+  const navigate = useNavigate();
   return (
-    <div 
-      className={`transition-all duration-300 ease-in-out flex-shrink-0 bg-white border-r border-gray-200 shadow-[2px_0_8px_-3px_rgba(0,0,0,0.05)] h-full z-20 overflow-hidden ${
-        isOpen ? "w-72" : "w-0 opacity-0"
-      }`}
+    <div
+      className={`transition-all duration-300 ease-in-out flex-shrink-0 bg-white border-r border-gray-200 shadow-[2px_0_8px_-3px_rgba(0,0,0,0.05)] h-full z-20 overflow-hidden ${isOpen ? "w-72" : "w-0 opacity-0"
+        }`}
     >
       <div className="w-72 p-4 h-full flex flex-col">
-        
+
         <div className="flex items-center justify-between mb-8 px-2 mt-2">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-sm">
@@ -16,9 +17,9 @@ export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, 
             </div>
             <h2 className="text-xl font-bold text-gray-800 tracking-tight">MoneyLens</h2>
           </div>
-          
-          <button 
-            onClick={toggleSidebar} 
+
+          <button
+            onClick={toggleSidebar}
             className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,23 +42,22 @@ export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, 
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
             Recent Conversations
           </h3>
-          
+
           {chats.length === 0 ? (
             <p className="text-xs text-gray-400 px-2 italic">No recent chats.</p>
           ) : (
             chats.map((chat) => (
               // The 'group' class allows us to show the delete button only on hover
-              <div 
-                key={chat.id} 
+              <div
+                key={chat.id}
                 className="relative group w-full flex items-center"
               >
                 <button
                   onClick={() => onSelectChat(chat.id)}
-                  className={`w-full text-left p-3 text-sm rounded-xl cursor-pointer truncate transition-all flex items-center gap-3 pr-10 ${
-                    chat.id === activeChatId
+                  className={`w-full text-left p-3 text-sm rounded-xl cursor-pointer truncate transition-all flex items-center gap-3 pr-10 ${chat.id === activeChatId
                       ? "bg-purple-50 text-purple-700 font-semibold shadow-sm border border-purple-100"
                       : "text-gray-600 bg-transparent hover:bg-gray-50 border border-transparent"
-                  }`}
+                    }`}
                 >
                   <svg className={`w-4 h-4 shrink-0 ${chat.id === activeChatId ? 'text-purple-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -82,6 +82,13 @@ export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, 
             ))
           )}
         </div>
+
+        <button
+          onClick={() => navigate("/reminder")}
+          className="w-full bg-blue-500 text-white py-2 rounded-lg mt-4 hover:bg-blue-600"
+        >
+          + Create Reminder
+        </button>
       </div>
     </div>
   );
