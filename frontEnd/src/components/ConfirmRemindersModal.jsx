@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import SubscriptionCard from "./SubscriptionCard";
 
-const API = "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
+  
+const API = BACKEND_URL;
 
 export default function ConfirmRemindersModal({ subscriptions, onClose, onSuccess }) {
   const [isLoading, setIsLoading] = useState(false);

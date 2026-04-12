@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API = "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
+  
+const API = BACKEND_URL;
 
 export default function ReminderForm() {
   const navigate = useNavigate();
