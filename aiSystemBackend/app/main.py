@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import re
+import time
+import difflib
 
-# Your existing imports
 from app.ai.security import scrub_pii, validate_sql
-from app.ai.agents import generate_query_plan, generate_sql, generate_explanation
+from app.ai.agents import generate_sql_with_plan, generate_explanation
 from app.db.database import execute_sql 
 
 app = FastAPI(title="MoneyLens API")
@@ -22,171 +23,116 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
 
+# --- THE SEMANTIC CACHE ---
+QUERY_CACHE = []
+
+def get_cached_query(query: str):
+    query_lower = query.lower().strip()
+    
+    # Strip conversational filler words to compare the "meat" of the question
+    fillers = {"what", "is", "my", "the", "which", "had", "did", "i", "show", "me", "tell", "on", "in", "for", "of", "to", "a"}
+    q1_words = set(re.findall(r'\w+', query_lower)) - fillers
+    
+    for item in QUERY_CACHE:
+        q2_words = set(re.findall(r'\w+', item["query"])) - fillers
+        if not q1_words or not q2_words:
+            continue
+        # Calculate Keyword Overlap (Jaccard Similarity)
+        overlap = len(q1_words.intersection(q2_words)) / len(q1_words.union(q2_words))
+        # If 70% of the core keywords match, it's a hit!
+        if overlap >= 0.70:
+            return item
+    return None
+
 def generate_trust_graph_payload(db_result, raw_sql):
-    """
-    DYNAMIC GRAPH GENERATOR (0 API Calls).
-    Parses the actual SQL structure and actual data returned to build provenance.
-    """
     if not db_result or "error" in str(db_result).lower():
          return {"nodes": [], "edges": []}
-
-    nodes = []
-    edges = []
-    
+    nodes, edges = [], []
     sql_upper = raw_sql.upper()
-    
-    # 1. Inspect SQL for AI-Enriched columns
     ai_features_used = []
     if "MERCHANT_CATEGORY" in sql_upper: ai_features_used.append("merchant_category")
     if "IS_RECURRING" in sql_upper: ai_features_used.append("is_recurring")
     if "IS_ONLINE" in sql_upper: ai_features_used.append("is_online")
 
-    # 2. Extract Data Sample for the Tooltip dynamically
     row_count = len(db_result)
     data_preview = f"Aggregated {row_count} row(s) from Database.\n\n"
-    
     if row_count == 1:
-        # It's an aggregate query (e.g., SUM). Show the exact keys and values!
-        for key, value in db_result[0].items():
-            data_preview += f"• {key}: {value}\n"
+        for key, value in db_result[0].items(): data_preview += f"• {key}: {value}\n"
     elif row_count > 1:
-        # It's a list of rows. Show a preview of the first 2 rows.
         data_preview += "Top results extracted:\n"
         for i, row in enumerate(db_result[:2]):
-            first_key = list(row.keys())[0]
-            first_val = list(row.values())[0]
-            data_preview += f"{i+1}. {first_key}: {first_val}\n"
-        if row_count > 2:
-            data_preview += f"...and {row_count - 2} more rows."
-
-    # 3. Calculate dynamic trust score
+            data_preview += f"{i+1}. {list(row.keys())[0]}: {list(row.values())[0]}\n"
+            
     trust = 100
-    if ai_features_used: trust -= (len(ai_features_used) * 3) # Penalty for using probabilistic AI data
-    if "LIKE" in sql_upper: trust -= 2 # Penalty for fuzzy matching
+    if ai_features_used: trust -= (len(ai_features_used) * 3) 
+    if "LIKE" in sql_upper: trust -= 2 
 
-    # NODE 1: Core Database Root
-    nodes.append({
-        "id": "source-db",
-        "position": { "x": 50, "y": 50 },
-        "type": "sourceNode",
-        "data": { 
-            "label": "Local SQLite: transactions", 
-            "score": 100 if not ai_features_used else 70, 
-            "details": f"Query executed successfully.\nColumns referenced: {sql_upper.count('SELECT')} SELECT block(s).\nConditions applied: {sql_upper.count('WHERE')} WHERE clause(s)."
-        }
-    })
+    nodes.append({"id": "source-db", "position": { "x": 50, "y": 50 }, "type": "sourceNode", "data": { "label": "Local SQLite: transactions", "score": 100 if not ai_features_used else 70, "details": "Query executed successfully." }})
+    if ai_features_used: nodes.append({"id": "source-ai", "position": { "x": 50, "y": 180 }, "type": "sourceNode", "data": { "label": "AI Enrichment Layer", "score": 30, "details": f"Probabilistic columns used:\n{', '.join(ai_features_used)}"}})
+    nodes.append({"id": "final-answer", "position": { "x": 400, "y": 115 if ai_features_used else 50 }, "type": "finalNode", "data": { "label": "Analyzed Insight", "trustScore": trust, "details": data_preview }})
     
-    # NODE 2: AI Enrichment (Dynamic)
-    if ai_features_used:
-        nodes.append({
-            "id": "source-ai",
-            "position": { "x": 50, "y": 180 },
-            "type": "sourceNode",
-            "data": { 
-                "label": "AI Enrichment Layer", 
-                "score": 30, 
-                "details": f"Probabilistic columns used:\n{', '.join(ai_features_used)}\n\nThese columns were inferred by AI during data ingestion."
-            }
-        })
-
-    # NODE 3: Final Computed Result
-    nodes.append({
-        "id": "final-answer",
-        "position": { "x": 400, "y": 115 if ai_features_used else 50 },
-        "type": "finalNode",
-        "data": { 
-            "label": "Analyzed Insight", 
-            "trustScore": trust, 
-            "details": data_preview # Injecting the actual data values here!
-        }
-    })
-
-    # Create connecting lines
     edges.append({ "id": "e1", "source": "source-db", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
-    if ai_features_used:
-        edges.append({ "id": "e2", "source": "source-ai", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
+    if ai_features_used: edges.append({ "id": "e2", "source": "source-ai", "target": "final-answer", "animated": True, "style": { "stroke": "#a855f7", "strokeWidth": 2 } })
 
     return { "nodes": nodes, "edges": edges }
 
 def process_user_query(user_question: str):
+    start_time = time.time()
     print(f"\n==================================================")
     print(f"🗣️ User Asked: {user_question}")
-    
     safe_query = scrub_pii(user_question)
     
-    print("🧠 Query Planner is mapping the logic...")
-    plan = generate_query_plan(safe_query)
+    # --- FIX 1: SEMANTIC CACHING ---
+    cached = get_cached_query(safe_query)
+    if cached:
+        print("⚡ CACHE HIT! Skipped Gemini generation (0.1s plan).")
+        plan_and_sql = cached["data"]
+    else:
+        print("🧠 CACHE MISS. Generating new SQL via Gemini...")
+        plan_and_sql = generate_sql_with_plan(safe_query)
+        if plan_and_sql.get("requires_data", True) and plan_and_sql.get("sql_query"):
+            QUERY_CACHE.append({"query": safe_query.lower().strip(), "data": plan_and_sql})
     
-    if not plan.get("requires_data", True):
-        print("👋 Conversational intent detected. Skipping SQL engine.")
+    if not plan_and_sql.get("requires_data", True):
         return {
             "question": user_question,
-            "level_1_simple_answer": plan.get("direct_answer", "Hello! I am MoneyLens. How can I help you analyze your finances today?"),
+            "level_1_simple_answer": plan_and_sql.get("direct_answer", "Hello! I am MoneyLens. How can I help you analyze your finances today?"),
             "level_2_sql_query": None,
             "level_3_raw_data": None,
             "execution_plan": None,
             "trustGraph": None
         }
     
-    print("👨‍💻 SQL Generator is writing dynamic code...")
-    raw_sql = generate_sql(safe_query, plan)
-    print(f"\n🔍 [DEBUG] RAW SQL GENERATED BY AI:\n{raw_sql}\n")
+    raw_sql = plan_and_sql.get("sql_query", "")
+    execution_plan = {"analytical_goal": plan_and_sql.get("analytical_goal", ""), "logical_steps": plan_and_sql.get("logical_steps", [])}
     
-    validation_result = validate_sql(raw_sql)
-    if not validation_result:
-        reason = getattr(validation_result, 'reason', 'Unknown reason')
-        layer = getattr(validation_result, 'layer', 'Unknown layer')
-        print(f"❌ [DEBUG] Security blocked! Layer: {layer} | Reason: {reason}")
+    if not validate_sql(raw_sql):
         return {
-            "level_1_simple_answer": f"Security check blocked this query.\n\nDebug Info -> Layer: {layer} | Reason: {reason}",
+            "level_1_simple_answer": "Security check blocked this query.",
             "level_2_sql_query": raw_sql,
             "level_3_raw_data": None,
-            "execution_plan": plan,
+            "execution_plan": execution_plan,
             "trustGraph": None
         }
     
     print("⚙️ Execution Engine running SQL...")
     db_result = execute_sql(raw_sql)
-    
-    # --- NEW: CATCH-ALL EXECUTION GATES ---
-    
-    # Bucket 3: Execution Failure (SQL Syntax Error / Hallucinated Column)
-    if isinstance(db_result, dict) and "error" in db_result.get("error", "").lower():
-        print(f"❌ [DEBUG] Database Error: {db_result['error']}")
-        return {
-            "question": user_question,
-            "level_1_simple_answer": "I understood your request, but I made a technical error while trying to fetch the data. Please try rephrasing your question.",
-            "level_2_sql_query": raw_sql.strip(),
-            "level_3_raw_data": [db_result], # Wrap in list so UI table can render the error cleanly
-            "execution_plan": plan,
-            "trustGraph": generate_trust_graph_payload([], raw_sql) # Empty graph
-        }
+    graph_payload = generate_trust_graph_payload(db_result, raw_sql)
 
-    # Bucket 4: Zero-Data Failure (Valid SQL, but no data matches)
-    if not db_result or len(db_result) == 0:
-        print("⚠️ [DEBUG] Query succeeded but returned 0 rows.")
-        return {
-            "question": user_question,
-            "level_1_simple_answer": "I successfully searched your records, but I couldn't find any transactions matching that exact request.",
-            "level_2_sql_query": raw_sql.strip(),
-            "level_3_raw_data": [],
-            "execution_plan": plan,
-            "trustGraph": generate_trust_graph_payload([], raw_sql)
-        }
-        
-    # --------------------------------------
-    
+    # We must still generate an explanation because the data might have changed 
+    # even if the SQL query was cached!
     print("🗣️ Final Explainer is generating insights...")
     final_answer = generate_explanation(safe_query, db_result)
-    
-    graph_payload = generate_trust_graph_payload(db_result, raw_sql)
+        
+    print(f"🚀 TOTAL LATENCY: {round(time.time() - start_time, 2)} seconds")
+    print(f"==================================================")
     
     return {
         "question": user_question,
         "level_1_simple_answer": final_answer,
         "level_2_sql_query": raw_sql.strip(),
         "level_3_raw_data": db_result,
-        "execution_plan": plan,
+        "execution_plan": execution_plan,
         "trustGraph": graph_payload
     }
 
@@ -199,5 +145,5 @@ def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    print("🚀 Starting FastAPI Server for Local Dev...")
+    print("🚀 Starting MoneyLens API Server (with Cache)...")
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

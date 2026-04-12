@@ -7,7 +7,6 @@ import ChatMessage from "../components/ChatMessage";
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [chats, setChats] = useState(() => {
     const saved = localStorage.getItem("moneylens_chats");
     return saved ? JSON.parse(saved) : [];
@@ -37,23 +36,12 @@ export default function Dashboard() {
   const activeChat = chats.find(c => c.id === activeChatId);
   const messages = activeChat ? activeChat.messages : [];
 
-  const handleNewChat = () => {
-    setActiveChatId(null);
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  // --- NEW: Delete Chat Logic ---
+  const handleNewChat = () => setActiveChatId(null);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  
   const handleDeleteChat = (chatIdToDelete) => {
-    // 1. Remove from state
     setChats(prevChats => prevChats.filter(chat => chat.id !== chatIdToDelete));
-    
-    // 2. If we deleted the active chat, reset the view to "New Chat"
-    if (activeChatId === chatIdToDelete) {
-      setActiveChatId(null);
-    }
+    if (activeChatId === chatIdToDelete) setActiveChatId(null);
   };
 
   const handleSendMessage = async (text) => {
@@ -135,36 +123,20 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar 
-        chats={chats} 
-        activeChatId={activeChatId} 
-        onSelectChat={setActiveChatId} 
-        onNewChat={handleNewChat}
-        onDeleteChat={handleDeleteChat} // <-- Pass delete function to Sidebar
-        isOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
+        chats={chats} activeChatId={activeChatId} onSelectChat={setActiveChatId} 
+        onNewChat={handleNewChat} onDeleteChat={handleDeleteChat} 
+        isOpen={isSidebarOpen} toggleSidebar={toggleSidebar}
       />
-
       <div className="flex-1 p-6 flex flex-col relative h-full overflow-hidden transition-all duration-300">
-        <ChatHeader 
-          isSidebarOpen={isSidebarOpen} 
-          toggleSidebar={toggleSidebar} 
-        />
+        <ChatHeader isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
         <div className="flex-1 flex flex-col items-center overflow-y-auto mb-4 w-full px-4 pb-20 scrollbar-hide">
           {!activeChatId || messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center w-full mt-10">
-              <h1 className="text-3xl font-semibold mb-2 text-gray-800">
-                What will you discover today?
-              </h1>
-              <p className="text-gray-500 mb-6">
-                Your AI credit card assistant
-              </p>
-              
+              <h1 className="text-3xl font-semibold mb-2 text-gray-800">What will you discover today?</h1>
+              <p className="text-gray-500 mb-6">Your AI credit card assistant</p>
               <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
-              
-              <div className="mt-8">
-                 <ChatCards />
-              </div>
+              <div className="mt-8"><ChatCards /></div>
             </div>
           ) : (
             <div className="flex-1 w-full max-w-4xl flex flex-col pt-4">
