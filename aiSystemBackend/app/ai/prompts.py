@@ -41,6 +41,12 @@ RULE 1 — INTENT MAPPING (what words mean)
 "savings" (in context of cancelling subscriptions)
     → SUM(amount) WHERE transaction_type='debit' AND is_recurring=1
 
+"subscriptions" / "recurring" / "expiring" / "subscriptions expiring"
+    → RETURN FULL SUBSCRIPTION RECORDS: SELECT merchant_name, amount, currency, 
+      billing_cycle_month, billing_cycle_year FROM transactions WHERE is_recurring=1 
+      AND transaction_type='debit'. DO NOT use COUNT() or GROUP BY. Return individual rows 
+      so the system can extract expiry dates and create calendar reminders.
+
 "transactions" (unqualified, e.g. "show my transactions")
     → Return both debit and credit rows. Do NOT filter by type unless the user specifies.
 

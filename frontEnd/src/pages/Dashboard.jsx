@@ -4,6 +4,7 @@ import ChatHeader from "../components/ChatHeader";
 import ChatInput from "../components/ChatInput";
 import ChatCards from "../components/ChatCards";
 import ChatMessage from "../components/ChatMessage";
+import ConfirmRemindersModal from "../components/ConfirmRemindersModal";
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -19,6 +20,8 @@ export default function Dashboard() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showRemindersModal, setShowRemindersModal] = useState(false);
+  const [modalSubscriptions, setModalSubscriptions] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +35,20 @@ export default function Dashboard() {
   useEffect(() => {
     scrollToBottom();
   }, [chats, activeChatId, isLoading]);
+
+  // Listen for custom event to open reminders modal from ChatMessage
+  useEffect(() => {
+    const handleOpenRemindersModal = (event) => {
+      const { subscriptions } = event.detail;
+      setModalSubscriptions(subscriptions);
+      setShowRemindersModal(true);
+    };
+
+    document.addEventListener("openCreateRemindersModal", handleOpenRemindersModal);
+    return () => {
+      document.removeEventListener("openCreateRemindersModal", handleOpenRemindersModal);
+    };
+  }, []);
 
   const activeChat = chats.find(c => c.id === activeChatId);
   const messages = activeChat ? activeChat.messages : [];
@@ -90,7 +107,8 @@ export default function Dashboard() {
                 sql: data.level_2_sql_query,
                 rawData: data.level_3_raw_data,
                 plan: data.execution_plan,
-                trustGraph: data.trustGraph
+                trustGraph: data.trustGraph,
+                expiring_subscriptions: data.expiring_subscriptions || []
               }
             ]
           };
@@ -166,6 +184,17 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Reminders Modal */}
+      {showRemindersModal && (
+        <ConfirmRemindersModal
+          subscriptions={modalSubscriptions}
+          onClose={() => setShowRemindersModal(false)}
+          onSuccess={() => {
+            // Optionally add a success toast notification here
+          }}
+        />
+      )}
     </div>
   );
 }
