@@ -6,6 +6,10 @@ import re
 import time
 import difflib
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from app.ai.security import scrub_pii, validate_sql
 from app.ai.agents import generate_sql_with_plan, generate_explanation
