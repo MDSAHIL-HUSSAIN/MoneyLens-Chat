@@ -3,7 +3,9 @@
 > Ask questions about your money in plain English. Get answers you can trust.
 
 🌐 **Live Dashboard:** [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/)
+
 📺 **Project Demo:** [https://youtu.be/Gv04GhKP6yk](https://youtu.be/Gv04GhKP6yk)
+
 ---
 
 ## 📌 Overview
