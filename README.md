@@ -1,12 +1,9 @@
 # 💳 MoneyLens — AI-Powered Credit Card Intelligence Assistant
 
 > Ask questions about your money in plain English. Get answers you can trust.
+
 🌐 **Live Dashboard:** [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/)
----
-
-[![MoneyLens Demo](https://img.youtube.com/vi/Gv04GhKP6yk/maxresdefault.jpg)](https://youtu.be/Gv04GhKP6yk)
-> 📺 *Click to watch — natural language queries, Trust Graph, subscription reminders, and WhatsApp integration in action.*
-
+📺 **Project Demo:** [https://youtu.be/Gv04GhKP6yk](https://youtu.be/Gv04GhKP6yk)
 ---
 
 ## 📌 Overview
