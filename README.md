@@ -1,8 +1,11 @@
 # 💳 MoneyLens — AI-Powered Credit Card Intelligence Assistant
 
 > Ask questions about your money in plain English. Get answers you can trust.
-
 🌐 **Live Dashboard:** [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/)
+---
+
+[![MoneyLens Demo](https://img.youtube.com/vi/Gv04GhKP6yk/maxresdefault.jpg)](https://youtu.be/Gv04GhKP6yk)
+> 📺 *Click to watch — natural language queries, Trust Graph, subscription reminders, and WhatsApp integration in action.*
 
 ---
 
@@ -13,13 +16,6 @@ MoneyLens is an AI-powered financial assistant that lets users ask natural langu
 Users upload their bank statement CSV, then talk with their data via a web dashboard or WhatsApp. MoneyLens converts every question into a validated SQL query, runs it against a local SQLite database, and returns a transparent answer with the SQL used, raw data rows, and a Trust Graph. It also detects recurring subscriptions and automatically creates Google Calendar reminders with one click — and brings the same intelligence to WhatsApp via the Meta Business API.
 
 **Intended users:** Any credit card holder who wants to understand their spending, track merchants, manage subscriptions, or get proactive reminders — without switching to a complex financial app.
-
----
-
-## 🎬 Demo
-
-[▶️ Watch Demo](utility/MoneyLensChat.mp4)
-> 📺 *Full walkthrough — natural language queries, Trust Graph, subscription reminders, and WhatsApp integration in action.*
 
 ---
 
