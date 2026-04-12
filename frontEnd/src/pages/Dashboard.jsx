@@ -7,6 +7,8 @@ import ChatMessage from "../components/ChatMessage";
 import ConfirmRemindersModal from "../components/ConfirmRemindersModal";
 
 export default function Dashboard() {
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [chats, setChats] = useState(() => {
     const saved = localStorage.getItem("moneylens_chats");
@@ -85,7 +87,7 @@ export default function Dashboard() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
@@ -126,7 +128,7 @@ export default function Dashboard() {
               ...chat.messages,
               {
                 role: "assistant",
-                text: "⚠️ Couldn't connect to backend. Is the Python server running on localhost:8000?",
+                text: `⚠️ Couldn't connect to backend. Is the Python server running on you backend server?`,
               }
             ]
           };
