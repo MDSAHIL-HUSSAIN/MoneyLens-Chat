@@ -39,14 +39,16 @@ whatsapp_bot/
 │       ├── ai.service.ts           # HTTP client — calls MoneyLens AI backend
 │       └── whatsapp.service.ts     # Meta Cloud API — sends outgoing messages
 ├── prisma/
+│   ├── migrations/                 # Prisma migration history
 │   └── schema.prisma               # PostgreSQL schema — Message model
+├── dist/                           # Compiled JS output (gitignored)
 ├── config.ts                       # Environment variable loading
 ├── index.ts                        # Express app entry point
+├── .env                            # Environment variables — NOT committed to repo
+├── .gitignore
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
-├── .env.example
-├── .gitignore
 └── README.md
 ```
 
@@ -102,17 +104,19 @@ npm install
 
 ### Step 3 — Configure Environment Variables
 
-**Mac / Linux:**
+Copy the example and fill in all required values:
+
 ```bash
+# Mac / Linux
 cp .env.example .env
 ```
 
-**Windows:**
 ```cmd
+# Windows
 copy .env.example .env
 ```
 
-Open `.env` and fill in all required values:
+Open `.env` and fill in:
 
 ```properties
 # Meta WhatsApp Business API
@@ -152,11 +156,6 @@ npm run build
 **Start:**
 ```bash
 npm start
-```
-
-**Or run in development mode (no build required):**
-```bash
-npm run dev
 ```
 
 **Expected output:**
@@ -207,7 +206,7 @@ MoneyLens:  To help decrease your credit card interest, consider reviewing your 
             free up funds to pay down your credit card balance faster and save on interest.
 ```
 
-> The bot returns the **Level 1 plain English answer only**. Full SQL, execution plan, and trust graph are available on the web dashboard.
+> The bot returns the **Level 1 plain English answer only**. Full SQL, execution plan, and trust graph are available on the web dashboard at [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/).
 
 ---
 

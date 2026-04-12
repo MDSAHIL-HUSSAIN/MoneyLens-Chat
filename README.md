@@ -2,13 +2,15 @@
 
 > Ask questions about your money in plain English. Get answers you can trust.
 
+🌐 **Live Dashboard:** [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/)
+
 ---
 
 ## 📌 Overview
 
 MoneyLens is an AI-powered financial assistant that lets users ask natural language questions about their credit card transactions and receive accurate, explainable insights — without needing SQL knowledge or Excel skills.
 
-Users upload their bank statement CSV, then chat with their data via a web dashboard or WhatsApp. MoneyLens converts every question into a validated SQL query, runs it against a local SQLite database, and returns a transparent answer with the SQL used, raw data rows, and a confidence score. It also detects recurring subscriptions and automatically creates Google Calendar reminders with one click — and brings the same intelligence to WhatsApp via the Meta Business API.
+Users upload their bank statement CSV, then talk with their data via a web dashboard or WhatsApp. MoneyLens converts every question into a validated SQL query, runs it against a local SQLite database, and returns a transparent answer with the SQL used, raw data rows, and a Trust Graph. It also detects recurring subscriptions and automatically creates Google Calendar reminders with one click — and brings the same intelligence to WhatsApp via the Meta Business API.
 
 **Intended users:** Any credit card holder who wants to understand their spending, track merchants, manage subscriptions, or get proactive reminders — without switching to a complex financial app.
 
@@ -20,7 +22,7 @@ People generate significant credit card transaction data every month but face re
 
 - **Data is hard to understand** — statements arrive as CSV or PDF with no insight layer.
 - **No natural language interface** — answering *"How much did I spend on food this month?"* requires SQL or manual Excel analysis.
-- **No conversational access** — users cannot simply chat with their financial data.
+- **No conversational access** — users cannot simply talk with their financial data.
 - **Financial tools are fragmented** — they exist as separate apps, away from platforms users already use daily like WhatsApp.
 - **No proactive reminders** — users forget credit card due dates and recurring subscription charges.
 
@@ -35,11 +37,11 @@ The following features are implemented and working:
 - **Natural Language Query Engine** — Ask questions like *"Which merchant charged me the most?"* or *"What did I spend on food in March?"* and get direct, accurate answers.
 - **AI → SQL Conversion** — User questions are converted to safe SQL using Google Gemini 2.5 Flash with schema-aware prompting and a Semantic Dictionary (e.g., "spending" → debit transactions, "total" → `SUM(amount)`).
 - **SQL Security Layer** — Only `SELECT` queries on the permitted schema are allowed. All destructive operations are blocked by the Forbidden Keyword Blocker and Schema Validator before execution.
-- **3-Level Transparent Answer** — Every response includes a plain English insight (Level 1), a SQL breakdown (Level 2), and raw data rows (Level 3).
-- **Trust Graph + Confidence Score** — Visual breakdown of how the answer was generated, showing data source transparency and confidence score (`TrustGraph.jsx`).
-- **Semantic Cache** — Similar queries are matched and reused without triggering a new Gemini call, reducing latency and API cost.
+- **3-Level Clarity Answer** — Every response includes a plain English insight (Level 1), a SQL breakdown (Level 2), and raw data rows (Level 3) — delivering **clarity** at every depth so users always understand exactly what they are seeing and why.
+- **Trust Graph** — The system displays the contribution percentage of each source used in generating the response. It also visualises this data through an interactive graph, where hovering over any node reveals the corresponding raw source (`TrustGraph.jsx`) — making every answer fully **trustworthy** and auditable.
+- **Semantic Cache** — Similar queries are matched and reused without triggering a new Gemini call, reducing latency and API cost — keeping responses fast for **speed** at scale.
 - **Credit Card Data Pipeline** — CSV files are cleaned, normalised, AI-enriched with merchant category, recurring detection, and online/offline classification, then deduplicated and stored in SQLite.
-- **Subscription Detection + Google Calendar Reminders** — The AI detects expiring subscriptions from transaction data and displays them in a dedicated chat tab. Users can bulk-create Google Calendar reminders for all detected subscriptions in one click, with OAuth 2.0 handled automatically via a popup window.
+- **Google Calendar Reminders** — The AI detects expiring subscriptions from transaction data and displays them in a dedicated chat tab. Users can bulk-create Google Calendar reminders for all detected subscriptions in one click, with OAuth 2.0 handled automatically via a popup window.
 - **Chat-Based Dashboard** — Web interface with persistent chat history, sidebar navigation, and multi-tab answer cards: Answer, SQL, Execution Plan, Trust Graph, and Subscriptions.
 - **WhatsApp Integration** — Users send questions on WhatsApp (Meta Business API) and receive short, instant answers. Conversations are stored in PostgreSQL via Prisma.
 - **PII Protection** — Card numbers, phone numbers, and email addresses are scrubbed from all data before it reaches the AI model.
@@ -62,9 +64,13 @@ The system is composed of six interconnected layers:
 
 **Data Ingestion Pipeline** — CSV uploads are AI-enriched (`is_recurring`, `merchant_category`, `is_online`), deduplicated by file hash, and stored in the database.
 
-**Response System** — The Trust Graph Generator produces the 3-level answer (Level 1: Simple Insight, Level 2: Breakdown, Level 3: SQL + Raw Data) with a Trust Score and Data Source Transparency view.
+**Three Level** — The Trust Graph Generator produces the 3-level answer (Level 1: Simple Insight, Level 2: Breakdown, Level 3: SQL + Raw Data) with a Trust Score and Data Source Transparency view.
 
 **Action Layer** — When subscriptions are detected, the Reminder Service triggers the Google Calendar API to create events automatically.
+
+### Data Flow Diagram
+
+![Data Flow Diagram](utility/dataFlowDiagramAisystemBackend.png)
 
 ---
 
@@ -77,6 +83,25 @@ The system is composed of six interconnected layers:
 ### WhatsApp — Live Conversation
 
 ![WhatsApp Live Conversation](utility/whatsapp%20features%20visulaization.png)
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| AI / LLM | Google Gemini 2.5 Flash |
+| Backend Language | Python 3.10+ |
+| Backend Framework | FastAPI + Uvicorn |
+| Frontend Language | TypeScript |
+| Frontend Framework | React 18 + Vite + Tailwind CSS |
+| Database | SQLite (`finance.db`) |
+| WhatsApp Bot | Node.js + TypeScript + Express |
+| Bot Database | PostgreSQL + Prisma ORM |
+| Messaging API | Meta Cloud API (WhatsApp Business) |
+| Calendar | Google Calendar API v3 + OAuth 2.0 |
+| Deployment (Frontend) | Vercel |
+| Deployment (Backend) | Render.com |
 
 ---
 
@@ -95,27 +120,38 @@ MoneyLens-Chat/
 │   │   ├── raw/                  # Uploaded CSVs (gitignored)
 │   │   └── finance.db            # SQLite database (gitignored)
 │   ├── scripts/
-│   ├── data_pipeline.py
+│   │   ├── data_pipeline.py
+│   │   └── view_db.py
+│   ├── .env.example
 │   ├── requirements.txt
 │   ├── runtime.txt
 │   └── render.yaml
 │
 ├── frontEnd/                     # React + TypeScript + Vite + Tailwind
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons.svg
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ChatMessage.jsx
-│   │   │   ├── TrustGraph.jsx
-│   │   │   ├── ConfirmRemindersModal.jsx
-│   │   │   ├── SubscriptionCard.jsx
-│   │   │   ├── Sidebar.jsx
 │   │   │   ├── ChatCards.jsx
 │   │   │   ├── ChatHeader.jsx
 │   │   │   ├── ChatHistoryItem.jsx
-│   │   │   └── ChatInput.jsx
-│   │   └── pages/
-│   │       ├── Dashboard.jsx
-│   │       └── ReminderForm.jsx
+│   │   │   ├── ChatInput.jsx
+│   │   │   ├── ChatMessage.jsx
+│   │   │   ├── ConfirmRemindersModal.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── SubscriptionCard.jsx
+│   │   │   └── TrustGraph.jsx
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx
+│   │   │   └── ReminderForm.jsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   └── main.tsx
+│   ├── .env.example
+│   ├── index.html
 │   ├── package.json
+│   ├── vercel.json
 │   └── vite.config.ts
 │
 ├── whatsapp_bot/                 # Node.js + TypeScript + Meta API + PostgreSQL
@@ -124,6 +160,8 @@ MoneyLens-Chat/
 │   │   ├── routes/               # whatsapp.routes.ts
 │   │   └── services/             # ai.service.ts, whatsapp.service.ts
 │   ├── prisma/
+│   │   ├── migrations/
+│   │   └── schema.prisma
 │   ├── config.ts
 │   ├── index.ts
 │   └── package.json
@@ -131,7 +169,7 @@ MoneyLens-Chat/
 ├── utility/                      # Architecture diagrams and screenshots
 │   ├── SystemArchitecture.png
 │   ├── aiSystemBackend.png
-│   ├── dataFlowDiagramAisystemBacken...png
+│   ├── dataFlowDiagramAisystemBackend.png
 │   ├── whatsappBotArchitrecture.png
 │   ├── whatsapp features visulaization.png
 │   └── calandervisualization.png
@@ -175,6 +213,7 @@ cd frontEnd
 npm install
 npm run dev
 # Dashboard: http://localhost:5173
+# Production: https://money-lens-chat.vercel.app/
 ```
 
 **Terminal 3 — WhatsApp Bot:**
@@ -238,11 +277,7 @@ MoneyLens:  Airbnb charged you the most this month, with a total of ₹5,000 spe
 - Google Gemini API requires a valid key from Google AI Studio; the free tier has rate limits.
 - Google Calendar integration requires completing a one-time OAuth 2.0 flow and a Google Cloud project with Calendar API enabled.
 - Meta WhatsApp Business API requires an approved Meta Developer app; not available instantly.
-- `finance.db` is a local SQLite file — resets on redeployment unless a persistent disk is attached.
 - CSV ingestion is tested against HDFC and ICICI statement formats; other banks may need column mapping adjustments.
-- The AI query engine handles single-table queries; multi-table joins are not yet supported.
-- Semantic cache is in-memory and resets on server restart.
-- The WhatsApp bot does not support CSV uploads; ingestion must be done via the dashboard.
 - Calendar reminder timezone is currently hardcoded to `Asia/Kolkata`.
 
 ---

@@ -39,7 +39,7 @@ The backend is structured into six layers that work together:
 
 ### Data Flow Diagram
 
-![Data Flow Diagram](../utility/dataFlowDiagramAisystemBacken...png)
+![Data Flow Diagram](../utility/dataFlowDiagramAisystemBackend.png)
 
 **Step-by-step flow:**
 
@@ -110,7 +110,8 @@ aiSystemBackend/
 │   ├── raw/                        # Place CSV files here before pipeline
 │   └── finance.db                  # SQLite database — NOT committed to repo
 ├── scripts/
-├── data_pipeline.py                # CSV ingestion + AI enrichment + SQLite loader
+│   ├── data_pipeline.py            # CSV ingestion + AI enrichment + SQLite loader
+│   └── view_db.py                  # Utility to inspect database contents
 ├── .env.example
 ├── requirements.txt
 ├── runtime.txt

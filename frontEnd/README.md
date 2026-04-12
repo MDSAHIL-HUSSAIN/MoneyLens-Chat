@@ -2,6 +2,8 @@
 
 The chat-based web dashboard for MoneyLens. Built with React + TypeScript + Vite + Tailwind CSS. Users upload their credit card CSV, ask natural language questions, and see detailed answers with generated SQL, raw data rows, and a visual trust score.
 
+🌐 **Live:** [https://money-lens-chat.vercel.app/](https://money-lens-chat.vercel.app/)
+
 ---
 
 ## 📌 What This Module Does
@@ -27,6 +29,9 @@ The chat-based web dashboard for MoneyLens. Built with React + TypeScript + Vite
 
 ```
 frontEnd/
+├── public/
+│   ├── favicon.svg
+│   └── icons.svg
 ├── src/
 │   ├── components/
 │   │   ├── ChatCards.jsx        # Answer card — shows data details and summary
@@ -34,25 +39,28 @@ frontEnd/
 │   │   ├── ChatHistoryItem.jsx  # Individual past conversation entry in sidebar
 │   │   ├── ChatInput.jsx        # Message input field and send button
 │   │   ├── ChatMessage.jsx      # Full message bubble with answer, SQL, and rows
+│   │   ├── ConfirmRemindersModal.jsx
 │   │   ├── Sidebar.jsx          # Left panel — chat history list
+│   │   ├── SubscriptionCard.jsx
 │   │   └── TrustGraph.jsx       # Visual confidence score and reasoning breakdown
 │   ├── pages/
-│   │   └── Dashboard.jsx        # Main page — layout, state management, API calls
+│   │   ├── Dashboard.jsx        # Main page — layout, state management, API calls
+│   │   └── ReminderForm.jsx
 │   ├── App.tsx                  # App root and routing
-│   ├── main.tsx                 # Vite entry point
-│   └── index.css                # Global Tailwind styles
-├── public/
+│   ├── index.css                # Global Tailwind styles
+│   └── main.tsx                 # Vite entry point
+├── .env.example
+├── eslint.config.js
 ├── index.html
 ├── package.json
 ├── package-lock.json
-├── tailwind.config.js
 ├── postcss.config.js
-├── vite.config.ts
-├── tsconfig.json
+├── tailwind.config.js
 ├── tsconfig.app.json
+├── tsconfig.json
 ├── tsconfig.node.json
-├── eslint.config.js
-└── .env.example
+├── vercel.json
+└── vite.config.ts
 ```
 
 ---
@@ -67,6 +75,7 @@ frontEnd/
 | Styling | Tailwind CSS |
 | HTTP Client | Fetch API |
 | Linting | ESLint |
+| Deployment | Vercel |
 
 ---
 
