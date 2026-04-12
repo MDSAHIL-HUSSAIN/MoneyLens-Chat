@@ -26,3 +26,4 @@ __pycache__/
 
 credentials.json
 token.json
+credentials.b64
