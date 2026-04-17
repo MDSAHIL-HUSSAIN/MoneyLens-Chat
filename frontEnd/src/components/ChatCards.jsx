@@ -15,8 +15,8 @@ export default function ChatCards() {
   ];
 
   return (
-    // Changed grid-cols-3 to be responsive: 1 col on mobile, 2 on small tablets, 3 on desktop
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4 w-full max-w-3xl">
+    // Added 'mx-auto' here so the max-w-3xl container centers itself instead of hugging the left edge
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4 w-full max-w-3xl mx-auto">
       {cards.map((card, i) => (
         <div
           key={i}
