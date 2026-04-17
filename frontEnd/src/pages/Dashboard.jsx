@@ -7,14 +7,14 @@ import ChatMessage from "../components/ChatMessage";
 import ConfirmRemindersModal from "../components/ConfirmRemindersModal";
 
 export default function Dashboard() {
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
-  
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [chats, setChats] = useState(() => {
     const saved = localStorage.getItem("moneylens_chats");
     return saved ? JSON.parse(saved) : [];
   });
-  
+
   const [activeChatId, setActiveChatId] = useState(() => {
     const savedChats = localStorage.getItem("moneylens_chats");
     const parsed = savedChats ? JSON.parse(savedChats) : [];
@@ -38,7 +38,6 @@ export default function Dashboard() {
     scrollToBottom();
   }, [chats, activeChatId, isLoading]);
 
-  // Listen for custom event to open reminders modal from ChatMessage
   useEffect(() => {
     const handleOpenRemindersModal = (event) => {
       const { subscriptions } = event.detail;
@@ -57,7 +56,7 @@ export default function Dashboard() {
 
   const handleNewChat = () => setActiveChatId(null);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  
+
   const handleDeleteChat = (chatIdToDelete) => {
     setChats(prevChats => prevChats.filter(chat => chat.id !== chatIdToDelete));
     if (activeChatId === chatIdToDelete) setActiveChatId(null);
@@ -69,21 +68,23 @@ export default function Dashboard() {
     if (!currentChatId) {
       const newChat = {
         id: Date.now().toString(),
-        title: text.length > 25 ? text.substring(0, 25) + '...' : text,
-        messages: []
+        title: text.length > 25 ? text.substring(0, 25) + "..." : text,
+        messages: [],
       };
       currentChatId = newChat.id;
       setChats(prev => [newChat, ...prev]);
       setActiveChatId(currentChatId);
     }
 
-    setChats(prevChats => prevChats.map(chat => {
-      if (chat.id === currentChatId) {
-        return { ...chat, messages: [...chat.messages, { role: "user", text }] };
-      }
-      return chat;
-    }));
-    
+    setChats(prevChats =>
+      prevChats.map(chat => {
+        if (chat.id === currentChatId) {
+          return { ...chat, messages: [...chat.messages, { role: "user", text }] };
+        }
+        return chat;
+      })
+    );
+
     setIsLoading(true);
 
     try {
@@ -94,47 +95,50 @@ export default function Dashboard() {
       });
 
       if (!response.ok) throw new Error("Network response was not ok");
-      
+
       const data = await response.json();
 
-      setChats(prevChats => prevChats.map(chat => {
-        if (chat.id === currentChatId) {
-          return {
-            ...chat,
-            messages: [
-              ...chat.messages,
-              {
-                role: "assistant",
-                text: data.level_1_simple_answer,
-                sql: data.level_2_sql_query,
-                rawData: data.level_3_raw_data,
-                plan: data.execution_plan,
-                trustGraph: data.trustGraph,
-                expiring_subscriptions: data.expiring_subscriptions || []
-              }
-            ]
-          };
-        }
-        return chat;
-      }));
-
+      setChats(prevChats =>
+        prevChats.map(chat => {
+          if (chat.id === currentChatId) {
+            return {
+              ...chat,
+              messages: [
+                ...chat.messages,
+                {
+                  role: "assistant",
+                  text: data.level_1_simple_answer,
+                  sql: data.level_2_sql_query,
+                  rawData: data.level_3_raw_data,
+                  plan: data.execution_plan,
+                  trustGraph: data.trustGraph,
+                  expiring_subscriptions: data.expiring_subscriptions || [],
+                },
+              ],
+            };
+          }
+          return chat;
+        })
+      );
     } catch (error) {
       console.error("Chat Error:", error);
-      setChats(prevChats => prevChats.map(chat => {
-        if (chat.id === currentChatId) {
-          return {
-            ...chat,
-            messages: [
-              ...chat.messages,
-              {
-                role: "assistant",
-                text: `⚠️ Couldn't connect to backend. Is the Python server running on you backend server?`,
-              }
-            ]
-          };
-        }
-        return chat;
-      }));
+      setChats(prevChats =>
+        prevChats.map(chat => {
+          if (chat.id === currentChatId) {
+            return {
+              ...chat,
+              messages: [
+                ...chat.messages,
+                {
+                  role: "assistant",
+                  text: `⚠️ Couldn't connect to backend. Is the Python server running on your backend server?`,
+                },
+              ],
+            };
+          }
+          return chat;
+        })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -142,34 +146,55 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar 
-        chats={chats} activeChatId={activeChatId} onSelectChat={setActiveChatId} 
-        onNewChat={handleNewChat} onDeleteChat={handleDeleteChat} 
-        isOpen={isSidebarOpen} toggleSidebar={toggleSidebar}
+      <Sidebar
+        chats={chats}
+        activeChatId={activeChatId}
+        onSelectChat={(id) => {
+          setActiveChatId(id);
+          if (window.innerWidth < 768) setIsSidebarOpen(false);
+        }}
+        onNewChat={() => {
+          handleNewChat();
+          if (window.innerWidth < 768) setIsSidebarOpen(false);
+        }}
+        onDeleteChat={handleDeleteChat}
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
       />
-      <div className="flex-1 p-6 flex flex-col relative h-full overflow-hidden transition-all duration-300">
+
+      {/* Mobile backdrop overlay — closes sidebar on tap */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-10 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      <div className="flex-1 min-w-0 p-4 md:p-6 flex flex-col relative h-full overflow-hidden transition-all duration-300">
         <ChatHeader isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-        <div className="flex-1 flex flex-col items-center overflow-y-auto mb-4 w-full px-4 pb-20 scrollbar-hide">
+        <div className="flex-1 flex flex-col items-center overflow-y-auto mb-4 w-full px-2 md:px-4 pb-20 scrollbar-hide">
           {!activeChatId || messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center w-full mt-10">
-              <h1 className="text-3xl font-semibold mb-2 text-gray-800">What will you discover today?</h1>
-              <p className="text-gray-500 mb-6">Your AI credit card assistant</p>
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-6 md:mt-10">
+              <h1 className="text-xl md:text-3xl font-semibold mb-2 text-gray-800 text-center px-4">
+                What will you discover today?
+              </h1>
+              <p className="text-gray-500 mb-6 text-sm md:text-base">Your AI credit card assistant</p>
               <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
-              <div className="mt-8"><ChatCards /></div>
+              <div className="mt-6 md:mt-8 w-full"><ChatCards /></div>
             </div>
           ) : (
-            <div className="flex-1 w-full max-w-4xl flex flex-col pt-4">
+            <div className="flex-1 w-full max-w-4xl flex flex-col pt-2 md:pt-4">
               {messages.map((msg, idx) => (
                 <ChatMessage key={idx} message={msg} />
               ))}
-              
+
               {isLoading && (
                 <div className="flex w-full justify-start mb-4">
                   <div className="max-w-[80%] p-4 rounded-xl shadow-sm bg-white border border-gray-100 rounded-bl-none flex items-center gap-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
                   </div>
                 </div>
               )}
@@ -179,7 +204,7 @@ export default function Dashboard() {
         </div>
 
         {activeChatId && messages.length > 0 && (
-          <div className="absolute bottom-6 left-0 w-full flex justify-center px-6 pointer-events-none">
+          <div className="absolute bottom-4 md:bottom-6 left-0 w-full flex justify-center px-3 md:px-6 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-3xl shadow-lg rounded-xl">
               <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
             </div>
@@ -187,14 +212,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Reminders Modal */}
       {showRemindersModal && (
         <ConfirmRemindersModal
           subscriptions={modalSubscriptions}
           onClose={() => setShowRemindersModal(false)}
-          onSuccess={() => {
-            // Optionally add a success toast notification here
-          }}
+          onSuccess={() => {}}
         />
       )}
     </div>

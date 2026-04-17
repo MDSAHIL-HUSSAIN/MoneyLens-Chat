@@ -33,7 +33,7 @@ export default function ChatInput({ onSend, isLoading }) {
   };
 
   return (
-    <div className="w-full max-w-3xl flex items-end bg-white rounded-xl shadow-md border border-gray-200 p-2 focus-within:ring-2 focus-within:ring-purple-100 focus-within:border-purple-300 transition-all">
+    <div className="w-full max-w-3xl flex items-end bg-white rounded-xl shadow-md border border-gray-200 p-1.5 sm:p-2 focus-within:ring-2 focus-within:ring-purple-100 focus-within:border-purple-300 transition-all">
       <textarea
         ref={textareaRef}
         value={input}
@@ -42,12 +42,13 @@ export default function ChatInput({ onSend, isLoading }) {
         disabled={isLoading}
         placeholder="Ask anything about your spending..."
         rows={1}
-        className="flex-1 outline-none px-3 py-2 bg-transparent text-gray-700 disabled:opacity-50 resize-none max-h-32 overflow-y-auto min-h-[44px] scrollbar-hide"
+        // CRITICAL MOBILE FIX: Added `text-base` (16px) so iOS Safari doesn't auto-zoom the page when tapped
+        className="flex-1 outline-none px-2 sm:px-3 py-2 bg-transparent text-gray-700 text-base disabled:opacity-50 resize-none max-h-32 overflow-y-auto min-h-[44px] scrollbar-hide"
       />
       <button
         onClick={handleSend}
         disabled={isLoading || !input.trim()}
-        className="mb-0.5 ml-2 bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition-colors flex items-center justify-center min-w-[44px] h-[44px] shrink-0 disabled:opacity-50"
+        className="mb-0.5 ml-1 sm:ml-2 bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition-colors flex items-center justify-center min-w-[44px] h-[44px] shrink-0 disabled:opacity-50"
       >
         {isLoading ? (
           <span className="block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
-  
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 const API = BACKEND_URL;
 
 export default function ReminderForm() {
@@ -42,30 +42,31 @@ export default function ReminderForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
         {/* Header with Back Button */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-white rounded-lg transition-all shadow-sm hover:shadow-md"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-600 hover:bg-white rounded-lg transition-all shadow-sm hover:shadow-md"
           >
             <span>←</span>
-            <span>Back</span>
+            <span className="hidden sm:inline">Back</span>
           </button>
-          <h1 className="text-2xl font-semibold text-gray-800">Create Reminder</h1>
-          <div className="w-24"></div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center">Create Reminder</h1>
+          {/* Spacer to keep title centered */}
+          <div className="w-12 sm:w-24"></div>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-white rounded-xl shadow-lg p-5 sm:p-8">
           {/* Google Calendar Section */}
-          <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">Step 1: Connect Calendar</h2>
-            <p className="text-gray-600 mb-4">Connect your Google Calendar to create reminders</p>
+          <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Step 1: Connect Calendar</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4">Connect your Google Calendar to create reminders</p>
             <button
               onClick={handleLogin}
-              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
+              className="w-full sm:w-auto flex justify-center items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
             >
               <span>📅</span>
               <span>Connect Google Calendar</span>
@@ -74,10 +75,10 @@ export default function ReminderForm() {
 
           {/* Reminder Form Section */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Step 2: Set Reminder Details</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Step 2: Set Reminder Details</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Subject *</label>
                 <input
                   name="subject"
                   type="text"
@@ -85,50 +86,51 @@ export default function ReminderForm() {
                   value={form.subject}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm sm:text-base"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Description</label>
                 <textarea
                   name="description"
                   placeholder="Add any additional details..."
                   value={form.description}
                   onChange={handleChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none text-sm sm:text-base"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Stack columns on mobile, side-by-side on sm screens */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Date *</label>
                   <input
                     name="date"
                     type="date"
                     value={form.date}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm sm:text-base"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Time *</label>
                   <input
                     name="time"
                     type="time"
                     value={form.time}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm sm:text-base"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Duration (minutes)</label>
                 <input
                   name="duration"
                   type="number"
@@ -136,13 +138,13 @@ export default function ReminderForm() {
                   max="480"
                   value={form.duration}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm sm:text-base"
                 />
               </div>
 
               {/* Status Message */}
               {status && (
-                <div className={`p-4 rounded-lg ${status.includes("failed") || status.includes("Error") || status.includes("wrong") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+                <div className={`p-3 sm:p-4 mt-2 rounded-lg text-sm sm:text-base ${status.includes("failed") || status.includes("Error") || status.includes("wrong") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
                   {status}
                 </div>
               )}
@@ -151,7 +153,7 @@ export default function ReminderForm() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+                className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed mt-4"
               >
                 {isLoading ? "Creating..." : "Create Reminder"}
               </button>
