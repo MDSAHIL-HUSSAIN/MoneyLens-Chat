@@ -316,5 +316,3 @@ All commits signed off per DCO:
 ```bash
 git commit -s -m "your commit message"
 ```
-
-*Built for NatWest Group — Code for Purpose India Hackathon.*
